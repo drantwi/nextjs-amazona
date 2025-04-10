@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import CartButton from './cart-button'
 
 export default function Menu() {
