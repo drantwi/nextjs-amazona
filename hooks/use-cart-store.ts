@@ -14,17 +14,12 @@ const initialState: Cart = {
   deliveryDateIndex: undefined,
 }
 
-interface CartState {
-  cart: Cart
-  addItem: (item: OrderItem, quantity: number) => Promise<string>
 
   updateItem: (item: OrderItem, quantity: number) => Promise<void>
   removeItem: (item: OrderItem) => void
 }
 
 const useCartStore = create(
-  persist<CartState>(
-    (set, get) => ({
       cart: initialState,
 
       addItem: async (item: OrderItem, quantity: number) => {
