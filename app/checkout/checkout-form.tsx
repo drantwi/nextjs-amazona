@@ -36,6 +36,14 @@ import useIsMounted from '@/hooks/use-is-mounted'
 import Link from 'next/link'
 import useCartStore from '@/hooks/use-cart-store'
 import ProductPrice from '@/components/shared/product/product-price'
+import {
+  APP_NAME,
+  AVAILABLE_DELIVERY_DATES,
+  AVAILABLE_PAYMENT_METHODS,
+  DEFAULT_PAYMENT_METHOD,
+} from '@/lib/constants'
+import { createOrder } from '@/lib/actions/order.actions'
+import { toast } from 'sonner'
 
 const shippingAddressDefaultValues =
   process.env.NODE_ENV === 'development'
@@ -77,6 +85,7 @@ const CheckoutForm = () => {
     updateItem,
     removeItem,
     setDeliveryDateIndex,
+    clearCart,
   } = useCartStore()
   const isMounted = useIsMounted()
 
@@ -107,12 +116,59 @@ const CheckoutForm = () => {
     useState<boolean>(false)
 
   const handlePlaceOrder = async () => {
-    // TODO: place order
+    const res = await createOrder({
+      items,
+      shippingAddress,
+      expectedDeliveryDate: calculateFutureDate(
+        AVAILABLE_DELIVERY_DATES[deliveryDateIndex!].daysToDeliver
+      ),
+      deliveryDateIndex,
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      taxPrice,
+      totalPrice,
+    })
+    if (!res.success) {
+      toast.error(res.message)
+    } else {
+      toast.success(res.message)
+      clearCart()
+      router.push(`/checkout/${res.data?.orderId}`)
+    }
   }
   const handleSelectPaymentMethod = () => {
     setIsAddressSelected(true)
     setIsPaymentMethodSelected(true)
   }
+  const handleSelectShippingAddress = () => {
+    shippingAddressForm.handleSubmit(onSubmitShippingAddress)()
+  }
+  const CheckoutSummary = () => (
+    <Card>
+      <CardContent className='p-4'>
+        {!isAddressSelected && (
+          <div className='border-b mb-4'>
+            <Button
+              className='rounded-full w-full'
+              onClick={handleSelectShippingAddress}
+            >
+              Ship to this address
+            </Button>
+            <p className='text-xs text-center py-2'>
+              Choose a shipping address and payment method in order to calculate
+              shipping, handling, and tax.
+            </p>
+          </div>
+        )}
+        {isAddressSelected && !isPaymentMethodSelected && (
+          <div className=' mb-4'>
+            <Button
+              className='rounded-full w-full'
+              onClick={handleSelectPaymentMethod}
+            >
+              Use this payment method
+            </Button>
 
             <p className='text-xs text-center py-2'>
               Choose a payment method to continue checking out. You&apos;ll
@@ -617,4 +673,38 @@ const CheckoutForm = () => {
                 <CheckoutSummary />
               </div>
 
+              <Card className='hidden md:block '>
+                <CardContent className='p-4 flex flex-col md:flex-row justify-between items-center gap-3'>
+                  <Button onClick={handlePlaceOrder} className='rounded-full'>
+                    Place Your Order
+                  </Button>
+                  <div className='flex-1'>
+                    <p className='font-bold text-lg'>
+                      Order Total: <ProductPrice price={totalPrice} plain />
+                    </p>
+                    <p className='text-xs'>
+                      {' '}
+                      By placing your order, you agree to {APP_NAME}&apos;s{' '}
+                      <Link href='/page/privacy-policy'>privacy notice</Link>{' '}
+                      and
+                      <Link href='/page/conditions-of-use'>
+                        {' '}
+                        conditions of use
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          <CheckoutFooter />
+        </div>
+        <div className='hidden md:block'>
+          <CheckoutSummary />
+        </div>
+      </div>
+    </main>
+  )
+}
 export default CheckoutForm
